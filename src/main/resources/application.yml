@@ -1,0 +1,36 @@
+server:
+  port: 8123 # 服务端口
+  servlet:
+    context-path: /api # 项目访问路径前缀
+spring:
+  profiles:
+    active: local # 激活的配置文件
+  application:
+    name: visual-assent # 应用名称
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver # 数据库驱动类名
+    url: ${DB_URL} # 数据库连接URL
+    username: ${DB_USERNAME} # 数据库用户名
+    password: ${DB_PASSWORD} # 数据库密码
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false # 驼峰命名转换(关闭)
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # SQL日志输出到控制台
+  global-config:
+    db-config:
+      logic-delete-field: isDelete # 逻辑删除字段名
+      logic-delete-value: 1 # 已删除值
+      logic-not-delete-value: 0 # 未删除值
+
+knife4j:
+  enable: true # 启用Knife4j
+  openapi:
+    title: 视觉素材管理平台 API 文档 # API文档标题
+    version: 1.0 # API版本号
+    group:
+      default:
+        group-name: 默认分组 # 分组名称
+        api-rule: package # API扫描规则
+        api-rule-resources:
+          - com.guyuqi.backend.controller # API扫描包路径

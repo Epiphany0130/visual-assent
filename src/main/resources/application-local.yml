@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:mysql://118.31.62.68:3306/VisualAssets # 数据库地址
+    username: dev # 数据库用户名
+    password: sdd0531sdd0531 # 数据库密码
