@@ -12,6 +12,10 @@ spring:
     url: ${DB_URL} # 数据库连接URL
     username: ${DB_USERNAME} # 数据库用户名
     password: ${DB_PASSWORD} # 数据库密码
+  # 开放更大的文件上传体积
+  servlet:
+    multipart:
+      max-file-size: 10MB
 
 mybatis-plus:
   configuration:
@@ -23,14 +27,24 @@ mybatis-plus:
       logic-delete-value: 1 # 已删除值
       logic-not-delete-value: 0 # 未删除值
 
+# springdoc-openapi 配置
+springdoc:
+  group-configs:
+    - group: 'default' # API分组名称
+      paths-to-match: '/**' # 匹配所有路径
+      packages-to-scan: com.guyuqi.backend.controller # 扫描控制器包路径
+
+# knife4j 增强配置
 knife4j:
-  enable: true # 启用Knife4j
-  openapi:
-    title: 视觉素材管理平台 API 文档 # API文档标题
-    version: 1.0 # API版本号
-    group:
-      default:
-        group-name: 默认分组 # 分组名称
-        api-rule: package # API扫描规则
-        api-rule-resources:
-          - com.guyuqi.backend.controller # API扫描包路径
+  enable: true # 启用Knife4j增强功能
+  setting:
+    language: zh_cn # 设置界面语言为中文
+
+# 对象存储配置（需要从腾讯云获取）
+cos:
+  client:
+    host: ${COS_HOST}
+    secretId: ${COS_SECRET_ID}
+    secretKey: ${COS_SECRET_KEY}
+    region: ${COS_REGION}
+    bucket: ${COS_BUCKET}
