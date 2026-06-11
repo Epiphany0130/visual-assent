@@ -3,6 +3,7 @@ package com.guyuqi.backend.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.guyuqi.backend.model.dto.picture.PictureQueryRequest;
+import com.guyuqi.backend.model.dto.picture.PictureReviewRequest;
 import com.guyuqi.backend.model.dto.picture.PictureUploadRequest;
 import com.guyuqi.backend.model.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -19,14 +20,14 @@ import org.springframework.web.multipart.MultipartFile;
 public interface PictureService extends IService<Picture> {
 
     /**
-     * 上传图片
+     * 上传图片（可重新上传）
      *
-     * @param multipartFile 图片文件
+     * @param inputSource 输入流
      * @param pictureUploadRequest 图片上传请求对象
      * @param loginUser 登录用户信息
      * @return 图片视图对象
      */
-    PictureVO uploadPicture(MultipartFile multipartFile,
+    PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
 
@@ -62,4 +63,20 @@ public interface PictureService extends IService<Picture> {
      * @param picture 图片实体对象
      */
     void validPicture(Picture picture);
+
+    /**
+     * 图片审核
+     *
+     * @param pictureReviewRequest 图片审核请求对象
+     * @param loginUser            登录用户信息
+     */
+    void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
+
+    /**
+     * 补充审核参数
+     *
+     * @param picture   图片
+     * @param loginUser 当前登录用户
+     */
+    void fillReviewParams(Picture picture, User loginUser);
 }

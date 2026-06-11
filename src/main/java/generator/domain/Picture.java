@@ -1,8 +1,8 @@
-package com.guyuqi.backend.model.entity;
+package generator.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.util.Date;
 import lombok.Data;
@@ -17,7 +17,7 @@ public class Picture {
     /**
      * id
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -113,6 +113,5 @@ public class Picture {
     /**
      * 是否删除
      */
-    @TableLogic
     private Integer isDelete;
 }
