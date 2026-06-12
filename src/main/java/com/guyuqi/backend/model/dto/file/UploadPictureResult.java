@@ -46,6 +46,11 @@ public class UploadPictureResult {
     private String thumbnailUrl;
 
     /**
+     * OCR识别结果（JSON）
+     */
+    private String ocrResult;
+
+    /**
      * 图片标签（JSON 数组）
      */
     private String tags;

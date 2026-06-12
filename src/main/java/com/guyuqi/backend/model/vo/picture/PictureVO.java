@@ -82,6 +82,11 @@ public class PictureVO implements Serializable {
     private String thumbnailUrl;
 
     /**
+     * OCR识别结果（JSON）
+     */
+    private String ocrResult;
+
+    /**
      * 审核状态：0-待审核; 1-通过; 2-拒绝
      */
     private Integer reviewStatus;

@@ -38,3 +38,7 @@ CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
 ALTER TABLE picture
     -- 添加新列
     ADD COLUMN thumbnailUrl varchar(512) NULL COMMENT '缩略图 url' AFTER userId;
+
+-- 添加 OCR 识别字段
+ALTER TABLE picture
+    ADD COLUMN ocrResult TEXT COMMENT 'OCR识别结果（JSON）' AFTER thumbnailUrl;

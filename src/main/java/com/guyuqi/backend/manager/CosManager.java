@@ -1,11 +1,18 @@
 package com.guyuqi.backend.manager;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.XML;
 import com.guyuqi.backend.config.CosClientConfig;
 import com.guyuqi.backend.model.entity.Picture;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.CosClientException;
+import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.qcloud.cos.model.GetObjectRequest;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
@@ -18,7 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -127,6 +136,58 @@ public class CosManager {
         } catch (Exception e) {
             log.error("图片标签识别失败, key={}", key, e);
             return new ArrayList<>();
+        }
+    }
+
+    /**
+     * OCR 文字识别（通过数据万象 OCR 接口）
+     *
+     * @param key 图片对象 key
+     * @return 识别出的文字，识别失败时返回空字符串
+     */
+    public String recognizeText(String key) {
+        try {
+            // 生成带 CI 参数的预签名 URL
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
+                    cosClientConfig.getBucket(), key, HttpMethodName.GET);
+            request.addRequestParameter("ci-process", "OCR");
+            request.addRequestParameter("type", "general");
+            request.addRequestParameter("language-type", "zh");
+            // 签名有效期 10 分钟
+            request.setExpiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000));
+            URL signedUrl = cosClient.generatePresignedUrl(request);
+            // 发起 GET 请求
+            HttpResponse httpResponse = HttpRequest.get(signedUrl.toString()).execute();
+            if (httpResponse.getStatus() != 200) {
+                log.error("OCR 请求失败, key={}, status={}", key, httpResponse.getStatus());
+                return "";
+            }
+            // 解析 XML 响应
+            JSONObject xmlJson = XML.toJSONObject(httpResponse.body());
+            JSONObject response = xmlJson.getJSONObject("Response");
+            if (response == null) {
+                return "";
+            }
+            JSONArray textDetections = response.getJSONArray("TextDetections");
+            if (textDetections == null || textDetections.isEmpty()) {
+                return "";
+            }
+            // 拼接所有识别出的文字
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < textDetections.size(); i++) {
+                JSONObject item = textDetections.getJSONObject(i);
+                String detectedText = item.getStr("DetectedText");
+                if (detectedText != null && !detectedText.isEmpty()) {
+                    if (sb.length() > 0) {
+                        sb.append("\n");
+                    }
+                    sb.append(detectedText);
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("OCR 文字识别失败, key={}", key, e);
+            return "";
         }
     }
 }

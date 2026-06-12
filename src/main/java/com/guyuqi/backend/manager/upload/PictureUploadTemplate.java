@@ -87,6 +87,9 @@ public abstract class PictureUploadTemplate {
                 // 自动获取图片标签
                 List<String> labels = cosManager.detectImageLabel(uploadPath);
                 result.setTags(JSONUtil.toJsonStr(labels));
+                // OCR 文字识别
+                String ocrText = cosManager.recognizeText(uploadPath);
+                result.setOcrResult(ocrText);
                 return result;
             }
             // 封装返回结果
