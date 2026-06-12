@@ -2,6 +2,7 @@ package com.guyuqi.backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.guyuqi.backend.model.dto.picture.PictureBatchUploadRequest;
 import com.guyuqi.backend.model.dto.picture.PictureQueryRequest;
 import com.guyuqi.backend.model.dto.picture.PictureReviewRequest;
 import com.guyuqi.backend.model.dto.picture.PictureUploadByBatchRequest;
@@ -14,11 +15,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
-* @author guyuqi
-* @description 针对表【picture(图片)】的数据库操作Service
-* @createDate 2026-06-09 08:44:37
-*/
+ * @author guyuqi
+ * @description 针对表【picture(图片)】的数据库操作Service
+ * @createDate 2026-06-09 08:44:37
+ */
 public interface PictureService extends IService<Picture> {
 
     /**
@@ -93,6 +96,18 @@ public interface PictureService extends IService<Picture> {
             PictureUploadByBatchRequest pictureUploadByBatchRequest,
             User loginUser
     );
+
+    /**
+     * 批量上传图片（本地文件）
+     *
+     * @param files 上传的图片文件数组
+     * @param pictureBatchUploadRequest 批量上传请求对象
+     * @param loginUser 登录用户信息
+     * @return 成功上传的图片视图对象列表
+     */
+    List<PictureVO> uploadPictureByFiles(MultipartFile[] files,
+                                         PictureBatchUploadRequest pictureBatchUploadRequest,
+                                         User loginUser);
 
     /**
      * 图片清理

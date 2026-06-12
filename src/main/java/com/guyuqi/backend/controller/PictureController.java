@@ -14,6 +14,7 @@ import com.guyuqi.backend.exception.BusinessException;
 import com.guyuqi.backend.exception.ErrorCode;
 import com.guyuqi.backend.exception.ThrowUtils;
 import com.guyuqi.backend.model.dto.picture.*;
+import java.util.List;
 import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.PictureReviewStatusEnum;
@@ -112,6 +113,25 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         Integer uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
         return ResultUtils.success(uploadCount);
+    }
+
+    /**
+     * 批量上传图片（本地文件），自动按规范命名
+     * 命名规则：项目名称_上传人_日期_序号
+     *
+     * @param files 上传的图片文件数组
+     * @param pictureBatchUploadRequest 批量上传请求对象
+     * @param request HTTP 请求对象
+     * @return 成功上传的图片视图对象列表
+     */
+    @PostMapping("/upload/batch/files")
+    public BaseResponse<List<PictureVO>> uploadPictureByFiles(
+            @RequestPart("files") MultipartFile[] files,
+            PictureBatchUploadRequest pictureBatchUploadRequest,
+            HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        List<PictureVO> pictureVOList = pictureService.uploadPictureByFiles(files, pictureBatchUploadRequest, loginUser);
+        return ResultUtils.success(pictureVOList);
     }
 
     /**

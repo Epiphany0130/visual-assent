@@ -16,6 +16,7 @@ import com.guyuqi.backend.manager.upload.FilePictureUpload;
 import com.guyuqi.backend.manager.upload.PictureUploadTemplate;
 import com.guyuqi.backend.manager.upload.UrlPictureUpload;
 import com.guyuqi.backend.model.dto.file.UploadPictureResult;
+import com.guyuqi.backend.model.dto.picture.PictureBatchUploadRequest;
 import com.guyuqi.backend.model.dto.picture.PictureQueryRequest;
 import com.guyuqi.backend.model.dto.picture.PictureReviewRequest;
 import com.guyuqi.backend.model.dto.picture.PictureUploadByBatchRequest;
@@ -38,6 +39,7 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Date;
@@ -389,6 +391,55 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         return uploadCount;
+    }
+
+    /**
+     * 批量上传图片（本地文件），自动按规范命名
+     * 命名规则：项目名称_上传人_日期_序号
+     *
+     * @param files 上传的图片文件数组
+     * @param pictureBatchUploadRequest 批量上传请求对象
+     * @param loginUser 登录用户信息
+     * @return 成功上传的图片视图对象列表
+     */
+    @Override
+    public List<PictureVO> uploadPictureByFiles(MultipartFile[] files,
+                                                PictureBatchUploadRequest pictureBatchUploadRequest,
+                                                User loginUser) {
+        ThrowUtils.throwIf(files == null || files.length == 0, ErrorCode.PARAMS_ERROR, "上传文件不能为空");
+        ThrowUtils.throwIf(pictureBatchUploadRequest == null || StrUtil.isBlank(pictureBatchUploadRequest.getProjectName()),
+                ErrorCode.PARAMS_ERROR, "项目名称不能为空");
+        String projectName = pictureBatchUploadRequest.getProjectName();
+        String userName = loginUser.getUserName();
+        String dateStr = DateUtil.formatDate(new Date());
+        // 查询当天该用户已上传的图片数量，作为起始序号
+        long todayCount = this.lambdaQuery()
+                .eq(Picture::getUserId, loginUser.getId())
+                .ge(Picture::getCreateTime, DateUtil.beginOfDay(new Date()))
+                .count();
+        List<PictureVO> result = new java.util.ArrayList<>();
+        int uploadCount = 0;
+        for (int i = 0; i < files.length; i++) {
+            MultipartFile file = files[i];
+            // 跳过空文件
+            if (file == null || file.isEmpty()) {
+                log.info("第 {} 个文件为空，已跳过", i + 1);
+                continue;
+            }
+            // 构造文件名：项目名称_上传人_日期_序号
+            String picName = projectName + "_" + userName + "_" + dateStr + "_" + (todayCount + uploadCount + 1);
+            PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
+            pictureUploadRequest.setPicName(picName);
+            try {
+                PictureVO pictureVO = this.uploadPicture(file, pictureUploadRequest, loginUser);
+                log.info("图片上传成功，id = {}", pictureVO.getId());
+                result.add(pictureVO);
+                uploadCount++;
+            } catch (Exception e) {
+                log.error("图片上传失败，文件名：{}", file.getOriginalFilename(), e);
+            }
+        }
+        return result;
     }
 
     /**
