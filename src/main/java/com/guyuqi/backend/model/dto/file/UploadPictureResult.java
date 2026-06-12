@@ -44,5 +44,10 @@ public class UploadPictureResult {
      * 缩略图 url
      */
     private String thumbnailUrl;
-  
+
+    /**
+     * 图片标签（JSON 数组）
+     */
+    private String tags;
+
 }

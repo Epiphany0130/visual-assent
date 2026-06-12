@@ -25,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import cn.hutool.json.JSONUtil;
+
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -81,7 +83,11 @@ public abstract class PictureUploadTemplate {
                     thumbnailCiObject = objectList.get(1);
                 }
                 // 封装压缩图的返回结果
-                return buildResult(originFilename, compressedCiobject, thumbnailCiObject);
+                UploadPictureResult result = buildResult(originFilename, compressedCiobject, thumbnailCiObject);
+                // 自动获取图片标签
+                List<String> labels = cosManager.detectImageLabel(uploadPath);
+                result.setTags(JSONUtil.toJsonStr(labels));
+                return result;
             }
             // 封装返回结果
             return buildResult(imageInfo, originFilename, file, uploadPath);

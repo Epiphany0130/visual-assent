@@ -9,13 +9,20 @@ import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GetObjectRequest;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.ciModel.image.ImageLabelRequest;
+import com.qcloud.cos.model.ciModel.image.ImageLabelResponse;
+import com.qcloud.cos.model.ciModel.image.Label;
 import com.qcloud.cos.model.ciModel.persistence.PicOperations;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class CosManager {  
   
@@ -94,5 +101,32 @@ public class CosManager {
      */
     public void deleteObject(String key) throws CosClientException {
         cosClient.deleteObject(cosClientConfig.getBucket(), key);
+    }
+
+    /**
+     * 自动获取图片标签（通过数据万象 detect-label 接口）
+     *
+     * @param key 图片对象 key
+     * @return 标签名称列表，识别失败时返回空列表
+     */
+    public List<String> detectImageLabel(String key) {
+        try {
+            ImageLabelRequest request = new ImageLabelRequest();
+            request.setBucketName(cosClientConfig.getBucket());
+            request.setObjectKey(key);
+            request.setScenes("web,camera,album,news");
+            ImageLabelResponse response = cosClient.getImageLabel(request);
+            List<Label> labels = response.getRecognitionResult();
+            if (labels == null || labels.isEmpty()) {
+                return new ArrayList<>();
+            }
+            return labels.stream()
+                    .map(Label::getName)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("图片标签识别失败, key={}", key, e);
+            return new ArrayList<>();
+        }
     }
 }
