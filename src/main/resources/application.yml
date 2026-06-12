@@ -2,6 +2,10 @@ server:
   port: 8123 # 服务端口
   servlet:
     context-path: /api # 项目访问路径前缀
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000 # 30 天的秒数
 spring:
   profiles:
     active: local # 激活的配置文件
@@ -24,6 +28,10 @@ spring:
       port: 6379
       password: ${REDIS_PASSWORD}
       timeout: 5000
+  # session 配置
+  session:
+    # session 30 天过期
+    timeout: 2592000 # 30 天的秒数
 
 mybatis-plus:
   configuration:
