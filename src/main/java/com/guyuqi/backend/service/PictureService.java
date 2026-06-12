@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.vo.picture.PictureVO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -92,4 +93,12 @@ public interface PictureService extends IService<Picture> {
             PictureUploadByBatchRequest pictureUploadByBatchRequest,
             User loginUser
     );
+
+    /**
+     * 图片清理
+     *
+     * @param oldPicture 旧图片数据
+     */
+    @Async
+    void clearPictureFile(Picture oldPicture);
 }
