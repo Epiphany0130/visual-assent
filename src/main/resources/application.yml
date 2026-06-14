@@ -32,6 +32,16 @@ spring:
   session:
     # session 30 天过期
     timeout: 2592000 # 30 天的秒数
+  # spring ai 配置
+  ai:
+    openai:
+      api-key: ${MIMO_API_KEY}
+      base-url: ${MIMO_BASE_URL}
+      chat:
+        completions-path: ${MIMO_CHAT_COMPLETIONS_PATH:/chat/completions}
+        options:
+          model: ${MIMO_MODEL}
+          temperature: 0.1
 
 mybatis-plus:
   configuration:

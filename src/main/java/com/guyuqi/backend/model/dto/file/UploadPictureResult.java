@@ -55,4 +55,24 @@ public class UploadPictureResult {
      */
     private String tags;
 
+    /**
+     * 主色调名称
+     */
+    private String dominantColor;
+
+    /**
+     * 主色调 Hex
+     */
+    private String dominantColorHex;
+
+    /**
+     * 颜色识别结果（JSON）
+     */
+    private String colorInfo;
+
+    /**
+     * AI 分析结果（JSON）
+     */
+    private String aiAnalysis;
+
 }

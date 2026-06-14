@@ -42,3 +42,13 @@ ALTER TABLE picture
 -- 添加 OCR 识别字段
 ALTER TABLE picture
     ADD COLUMN ocrResult TEXT COMMENT 'OCR识别结果（JSON）' AFTER thumbnailUrl;
+
+-- 添加 AI 分析字段
+ALTER TABLE picture
+    ADD COLUMN dominantColor varchar(32) NULL COMMENT '主色调名称' AFTER ocrResult,
+    ADD COLUMN dominantColorHex varchar(16) NULL COMMENT '主色调 Hex' AFTER dominantColor,
+    ADD COLUMN colorInfo TEXT NULL COMMENT '颜色识别结果（JSON）' AFTER dominantColorHex,
+    ADD COLUMN aiAnalysis TEXT NULL COMMENT 'AI 分析结果（JSON）' AFTER colorInfo;
+
+-- 主色调查询索引
+CREATE INDEX idx_dominantColor ON picture (dominantColor);

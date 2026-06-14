@@ -114,6 +114,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
         picture.setTags(uploadPictureResult.getTags());
         picture.setOcrResult(uploadPictureResult.getOcrResult());
+        picture.setDominantColor(uploadPictureResult.getDominantColor());
+        picture.setDominantColorHex(uploadPictureResult.getDominantColorHex());
+        picture.setColorInfo(uploadPictureResult.getColorInfo());
+        picture.setAiAnalysis(uploadPictureResult.getAiAnalysis());
         // 支持外层传递图片名称
         String picName = uploadPictureResult.getPicName();
         if(pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
@@ -182,6 +186,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                     .like("introduction", searchText)
                     .or()
                     .like("ocrResult", searchText)
+                    .or()
+                    .like("dominantColor", searchText)
             );
         }
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);

@@ -16,6 +16,7 @@ import com.guyuqi.backend.exception.ErrorCode;
 import com.guyuqi.backend.exception.ThrowUtils;
 import com.guyuqi.backend.manager.CosManager;
 import com.guyuqi.backend.model.dto.file.UploadPictureResult;
+import com.guyuqi.backend.service.AiService;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
@@ -33,6 +34,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -41,8 +43,11 @@ public abstract class PictureUploadTemplate {
     @Resource
     private CosClientConfig cosClientConfig;
   
-    @Resource  
+    @Resource
     private CosManager cosManager;
+
+    @Resource
+    private AiService aiService;
 
     /**
      * 模板方法 定义上传流程
@@ -90,6 +95,13 @@ public abstract class PictureUploadTemplate {
                 // OCR 文字识别
                 String ocrText = cosManager.recognizeText(uploadPath);
                 result.setOcrResult(ocrText);
+                // AI 图像洞察
+                String imageUrl = cosClientConfig.getHost() + uploadPath;
+                Map<String, String> aiInsight = aiService.analyzeImage(imageUrl);
+                result.setDominantColor(aiInsight.get("dominantColor"));
+                result.setDominantColorHex(aiInsight.get("dominantHex"));
+                result.setColorInfo(aiInsight.get("colorInfo"));
+                result.setAiAnalysis(aiInsight.get("aiAnalysis"));
                 return result;
             }
             // 封装返回结果

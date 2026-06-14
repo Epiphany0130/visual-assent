@@ -117,7 +117,11 @@
 			<groupId>org.springframework.session</groupId>
 			<artifactId>spring-session-data-redis</artifactId>
 		</dependency>
-
+		<!--		spring ai-->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -136,8 +140,17 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>1.0.9</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
+
+
 
 
 	<build>

@@ -86,6 +86,26 @@ public class Picture {
     private String ocrResult;
 
     /**
+     * 主色调名称
+     */
+    private String dominantColor;
+
+    /**
+     * 主色调 Hex
+     */
+    private String dominantColorHex;
+
+    /**
+     * 颜色识别结果（JSON）
+     */
+    private String colorInfo;
+
+    /**
+     * AI 分析结果（JSON）
+     */
+    private String aiAnalysis;
+
+    /**
      * 审核状态：0-待审核; 1-通过; 2-拒绝
      */
     private Integer reviewStatus;
