@@ -1,6 +1,9 @@
 package com.guyuqi.backend.controller;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -14,7 +17,8 @@ import com.guyuqi.backend.exception.BusinessException;
 import com.guyuqi.backend.exception.ErrorCode;
 import com.guyuqi.backend.exception.ThrowUtils;
 import com.guyuqi.backend.model.dto.picture.*;
-import java.util.List;
+import com.guyuqi.backend.manager.CosManager;
+import com.guyuqi.backend.config.CosClientConfig;
 import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.PictureReviewStatusEnum;
@@ -33,6 +37,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -51,6 +57,12 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+    @Resource
+    private CosManager cosManager;
+
+    @Resource
+    private CosClientConfig cosClientConfig;
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -399,5 +411,113 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 上传图片以图搜图（临时文件，不入库）
+     *
+     * @param file      上传的图片文件
+     * @param limit     返回结果数量上限，默认 10
+     * @param threshold 最低相似度分数，默认 60
+     * @param request   HTTP 请求对象
+     * @return 匹配的图片列表
+     */
+    @PostMapping("/search/image")
+    public BaseResponse<List<PictureVO>> searchByImageUpload(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "60") int threshold,
+            HttpServletRequest request) throws IOException {
+        ThrowUtils.throwIf(file == null || file.isEmpty(), ErrorCode.PARAMS_ERROR, "图片文件不能为空");
+        // 上传到 COS 临时目录
+        String ext = FileUtil.getSuffix(file.getOriginalFilename());
+        String tempKey = "_search_temp/" + System.currentTimeMillis() + "_" + RandomUtil.randomString(16) + "." + ext;
+        File tempFile = File.createTempFile("search_", "." + ext);
+        try {
+            file.transferTo(tempFile);
+            String tempUrl = cosManager.uploadTempSearchImage(tempKey, tempFile);
+            // 以图搜图
+            List<String> cosUris = cosManager.searchByImage(tempUrl, limit, threshold);
+            if (cosUris.isEmpty()) {
+                return ResultUtils.success(new java.util.ArrayList<>());
+            }
+            // 根据 URI 查询数据库
+            String bucket = cosClientConfig.getBucket();
+            List<PictureVO> result = new java.util.ArrayList<>();
+            for (String uri : cosUris) {
+                String path = uri.replace("cos://" + bucket + "/", "");
+                Picture matchPicture = pictureService.lambdaQuery()
+                        .like(Picture::getUrl, path)
+                        .last("LIMIT 1")
+                        .one();
+                if (matchPicture != null) {
+                    result.add(pictureService.getPictureVO(matchPicture, request));
+                }
+            }
+            return ResultUtils.success(result);
+        } finally {
+            // 清理临时文件
+            tempFile.delete();
+            try {
+                cosManager.deleteObject(tempKey);
+            } catch (Exception e) {
+                log.warn("清理临时搜图文件失败: {}", tempKey, e);
+            }
+        }
+    }
+
+    /**
+     * 通过 URL 以图搜图（临时文件，不入库）
+     *
+     * @param imageUrl 图片 URL
+     * @param limit    返回结果数量上限，默认 10
+     * @param threshold 最低相似度分数，默认 60
+     * @param request  HTTP 请求对象
+     * @return 匹配的图片列表
+     */
+    @GetMapping("/search/image")
+    public BaseResponse<List<PictureVO>> searchByImage(
+            @RequestParam String imageUrl,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "60") int threshold,
+            HttpServletRequest request) throws IOException {
+        ThrowUtils.throwIf(StrUtil.isBlank(imageUrl), ErrorCode.PARAMS_ERROR, "图片 URL 不能为空");
+        // 下载图片到临时文件，上传到 COS 临时目录
+        String ext = FileUtil.getSuffix(imageUrl);
+        if (StrUtil.isBlank(ext)) {
+            ext = "jpg";
+        }
+        String tempKey = "_search_temp/" + System.currentTimeMillis() + "_" + RandomUtil.randomString(16) + "." + ext;
+        File tempFile = File.createTempFile("search_", "." + ext);
+        try {
+            HttpUtil.downloadFile(imageUrl, tempFile);
+            String tempUrl = cosManager.uploadTempSearchImage(tempKey, tempFile);
+            // 以图搜图
+            List<String> cosUris = cosManager.searchByImage(tempUrl, limit, threshold);
+            if (cosUris.isEmpty()) {
+                return ResultUtils.success(new java.util.ArrayList<>());
+            }
+            // 根据 URI 查询数据库
+            String bucket = cosClientConfig.getBucket();
+            List<PictureVO> result = new java.util.ArrayList<>();
+            for (String uri : cosUris) {
+                String path = uri.replace("cos://" + bucket + "/", "");
+                Picture matchPicture = pictureService.lambdaQuery()
+                        .like(Picture::getUrl, path)
+                        .last("LIMIT 1")
+                        .one();
+                if (matchPicture != null) {
+                    result.add(pictureService.getPictureVO(matchPicture, request));
+                }
+            }
+            return ResultUtils.success(result);
+        } finally {
+            tempFile.delete();
+            try {
+                cosManager.deleteObject(tempKey);
+            } catch (Exception e) {
+                log.warn("清理临时搜图文件失败: {}", tempKey, e);
+            }
+        }
     }
 }

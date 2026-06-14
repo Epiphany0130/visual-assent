@@ -39,8 +39,13 @@ public class CosClientConfig {
     /**  
      * 桶名  
      */  
-    private String bucket;  
-  
+    private String bucket;
+
+    /**
+     * 智能检索数据集名称
+     */
+    private String datasetName;
+
     @Bean
     public COSClient cosClient() {
         // 初始化用户身份信息(secretId, secretKey)  

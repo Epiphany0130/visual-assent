@@ -5,9 +5,9 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import cn.hutool.json.XML;
 import com.guyuqi.backend.config.CosClientConfig;
-import com.guyuqi.backend.model.entity.Picture;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.http.HttpMethodName;
@@ -24,10 +24,18 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -113,6 +121,17 @@ public class CosManager {
     }
 
     /**
+     * 上传临时搜图文件到 COS（不做图片处理，不存数据库）
+     *
+     * @param key  唯一键（含目录）
+     * @param file 文件
+     */
+    public String uploadTempSearchImage(String key, File file) {
+        putObject(key, file);
+        return cosClientConfig.getHost() + "/" + key;
+    }
+
+    /**
      * 自动获取图片标签（通过数据万象 detect-label 接口）
      *
      * @param key 图片对象 key
@@ -188,6 +207,161 @@ public class CosManager {
         } catch (Exception e) {
             log.error("OCR 文字识别失败, key={}", key, e);
             return "";
+        }
+    }
+
+    /**
+     * 计算 SHA-1 并返回 hex 字符串
+     */
+    private static String sha1Hex(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            return HexFormat.of().formatHex(digest.digest(data));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-1 计算失败", e);
+        }
+    }
+
+    /**
+     * 计算 HMAC-SHA1 并返回 hex 字符串
+     */
+    private static String hmacSha1Hex(byte[] key, byte[] data) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA1");
+            mac.init(new SecretKeySpec(key, "HmacSHA1"));
+            return HexFormat.of().formatHex(mac.doFinal(data));
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new RuntimeException("HMAC-SHA1 计算失败", e);
+        }
+    }
+
+    /**
+     * 以图搜图（通过 MetaInsight 多模态混合检索 API）
+     *
+     * @param imageUrl 图片的完整 URL（COS 地址）
+     * @param limit    返回结果数量上限
+     * @param threshold 最低相似度分数
+     * @return 匹配的图片 COS URI 列表
+     */
+    public List<String> searchByImage(String imageUrl, int limit, int threshold) {
+        try {
+            // 从 URL 中提取 bucket 和 path，拼成 cos://bucket/path 格式
+            String cosHost = cosClientConfig.getHost();
+            String bucket = cosClientConfig.getBucket();
+            String path = imageUrl;
+            if (imageUrl.startsWith(cosHost)) {
+                path = imageUrl.substring(cosHost.length());
+            } else if (imageUrl.startsWith("https://")) {
+                int pathStart = imageUrl.indexOf("/", 8);
+                if (pathStart > -1) {
+                    path = imageUrl.substring(pathStart);
+                }
+            }
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
+            // 去掉 COS 图片处理后缀（如 !w640.jpg），这些不是真实文件 key
+            int exclIndex = path.indexOf('!');
+            if (exclIndex > -1) {
+                path = path.substring(0, exclIndex);
+            }
+            String cosUri = "cos://" + bucket + "/" + path;
+
+            // 构造请求体
+            JSONObject body = new JSONObject();
+            body.set("DatasetName", cosClientConfig.getDatasetName());
+            body.set("Mode", "pic");
+            body.set("Templates", "ImageSearch");
+            body.set("SearchURIs", new JSONArray().put(cosUri));
+            body.set("Limit", limit);
+            body.set("MatchThreshold", threshold);
+            String payload = body.toString();
+
+            // 构造 API 端点
+            String appId = bucket.contains("-") ? bucket.substring(bucket.lastIndexOf("-") + 1) : bucket;
+            String region = cosClientConfig.getRegion();
+            String ciHost = appId + ".ci." + region + ".myqcloud.com";
+            String endpoint = "https://" + ciHost + "/datasetquery/hybridsearch";
+
+            // ====== q-sign 签名算法（HMAC-SHA1） ======
+            String secretId = cosClientConfig.getSecretId();
+            String secretKey = cosClientConfig.getSecretKey();
+
+            // Step 1: KeyTime = StartTimestamp;EndTimestamp
+            long now = Instant.now().getEpochSecond();
+            long expires = now + 600;
+            String keyTime = now + ";" + expires;
+
+            // Step 2: SignKey = HMAC-SHA1(SecretKey, KeyTime)
+            String signKey = hmacSha1Hex(
+                    secretKey.getBytes(StandardCharsets.UTF_8),
+                    keyTime.getBytes(StandardCharsets.UTF_8));
+
+            // Step 3: HttpString = HttpMethod\nUriPathname\nHttpParameters\nHttpHeaders\n
+            // HttpMethod 必须小写，无 query params 和 headers 时保留空行
+            String httpString = "post\n/datasetquery/hybridsearch\n\n\n";
+
+            // Step 4: StringToSign = sha1\nKeyTime\nSHA1(HttpString)\n
+            String httpStringHash = sha1Hex(httpString.getBytes(StandardCharsets.UTF_8));
+            String stringToSign = "sha1\n" + keyTime + "\n" + httpStringHash + "\n";
+
+            // Step 5: Signature = HMAC-SHA1(SignKey字符串形式, StringToSign)
+            // 重要：SignKey 使用 hex 字符串形式（转为 UTF-8 字节），而非原始二进制
+            String signature = hmacSha1Hex(
+                    signKey.getBytes(StandardCharsets.UTF_8),
+                    stringToSign.getBytes(StandardCharsets.UTF_8));
+
+            // Step 6: 构造 Authorization header
+            String authorization = String.format(
+                    "q-sign-algorithm=sha1&q-ak=%s&q-sign-time=%s&q-key-time=%s&q-header-list=&q-url-param-list=&q-signature=%s",
+                    secretId, keyTime, keyTime, signature);
+
+            // 发送请求
+            log.info("以图搜图请求: endpoint={}, cosUri={}, payload={}", endpoint, cosUri, payload);
+            HttpResponse httpResponse = HttpRequest.post(endpoint)
+                    .header("Authorization", authorization)
+                    .header("Content-Type", "application/json")
+                    .header("Host", ciHost)
+                    .body(payload)
+                    .timeout(10000)
+                    .execute();
+
+            log.info("以图搜图响应: status={}, body={}", httpResponse.getStatus(), httpResponse.body());
+            if (httpResponse.getStatus() != 200) {
+                log.error("以图搜图请求失败, status={}, body={}", httpResponse.getStatus(), httpResponse.body());
+                return new ArrayList<>();
+            }
+
+            // 解析响应（COS 返回的是 XML，不是 JSON）
+            JSONObject xmlJson = XML.toJSONObject(httpResponse.body());
+            JSONObject response = xmlJson.getJSONObject("Response");
+            if (response == null) {
+                return new ArrayList<>();
+            }
+            // 多条结果时 ImageResult 是 JSONArray，单条时是 JSONObject
+            Object imageResultObj = response.get("ImageResult");
+            JSONArray imageResult;
+            if (imageResultObj instanceof JSONArray) {
+                imageResult = (JSONArray) imageResultObj;
+            } else if (imageResultObj instanceof JSONObject) {
+                imageResult = new JSONArray();
+                imageResult.add(imageResultObj);
+            } else {
+                return new ArrayList<>();
+            }
+
+            List<String> resultUris = new ArrayList<>();
+            for (int i = 0; i < imageResult.size(); i++) {
+                JSONObject item = imageResult.getJSONObject(i);
+                String uri = item.getStr("URI");
+                if (uri != null && !uri.isEmpty()) {
+                    resultUris.add(uri);
+                }
+            }
+            return resultUris;
+        } catch (Exception e) {
+            log.error("以图搜图失败, imageUrl={}", imageUrl, e);
+            return new ArrayList<>();
         }
     }
 }

@@ -74,3 +74,4 @@ cos:
     secretKey: ${COS_SECRET_KEY}
     region: ${COS_REGION}
     bucket: ${COS_BUCKET}
+    datasetName: ${COS_DATASET_NAME}
