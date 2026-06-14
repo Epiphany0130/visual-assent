@@ -188,6 +188,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                     .like("ocrResult", searchText)
                     .or()
                     .like("dominantColor", searchText)
+                    .or()
+                    .like("tags", searchText)
             );
         }
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
@@ -206,7 +208,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // JSON 数组查询
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {
-                queryWrapper.like("tags", "\"" + tag + "\"");
+                queryWrapper.apply("JSON_CONTAINS(tags, {0})", "\"" + tag + "\"");
             }
         }
         // 排序
