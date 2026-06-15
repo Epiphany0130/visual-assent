@@ -250,13 +250,16 @@ public class CosManager {
             String bucket = cosClientConfig.getBucket();
             String path = imageUrl;
             if (imageUrl.startsWith(cosHost)) {
+                // URL 是 COS 的地址，直接截取 path 部分
                 path = imageUrl.substring(cosHost.length());
             } else if (imageUrl.startsWith("https://")) {
+                // URL 是其他网站的图片，取域名后的路径
                 int pathStart = imageUrl.indexOf("/", 8);
                 if (pathStart > -1) {
                     path = imageUrl.substring(pathStart);
                 }
             }
+            // 去掉开头的 /
             if (path.startsWith("/")) {
                 path = path.substring(1);
             }
@@ -265,16 +268,17 @@ public class CosManager {
             if (exclIndex > -1) {
                 path = path.substring(0, exclIndex);
             }
+            // 拼接 URI
             String cosUri = "cos://" + bucket + "/" + path;
 
             // 构造请求体
             JSONObject body = new JSONObject();
-            body.set("DatasetName", cosClientConfig.getDatasetName());
-            body.set("Mode", "pic");
-            body.set("Templates", "ImageSearch");
-            body.set("SearchURIs", new JSONArray().put(cosUri));
-            body.set("Limit", limit);
-            body.set("MatchThreshold", threshold);
+            body.set("DatasetName", cosClientConfig.getDatasetName()); // 预建的数据集
+            body.set("Mode", "pic"); // 图片搜索模式（还有 text 文本模式）
+            body.set("Templates", "ImageSearch"); // 使用图片搜索模板
+            body.set("SearchURIs", new JSONArray().put(cosUri)); // 要搜索的图片
+            body.set("Limit", limit); // 最多返回几条
+            body.set("MatchThreshold", threshold); // 最低相似度，低于这个分数的结果不返回
             String payload = body.toString();
 
             // 构造 API 端点
@@ -283,30 +287,39 @@ public class CosManager {
             String ciHost = appId + ".ci." + region + ".myqcloud.com";
             String endpoint = "https://" + ciHost + "/datasetquery/hybridsearch";
 
-            // ====== q-sign 签名算法（HMAC-SHA1） ======
+            // ====== q-sign 签名算法（HMAC-SHA1） ======、
+            // q-sign 就是银行挂号信的完整流程：有效期防旧信重发 + 密钥防伪造 + 内容盖章防篡改。三层保险，缺一不可。
             String secretId = cosClientConfig.getSecretId();
             String secretKey = cosClientConfig.getSecretKey();
 
             // Step 1: KeyTime = StartTimestamp;EndTimestamp
-            long now = Instant.now().getEpochSecond();
-            long expires = now + 600;
-            String keyTime = now + ";" + expires;
+            // 贴个有效期：这封信从 今天下午2点 到 下午2点10分 有效。过期作废。
+            long now = Instant.now().getEpochSecond(); // 获取当前时间戳
+            long expires = now + 600; // 600 秒后过期
+            String keyTime = now + ";" + expires; // "1718467200;1718467800"
 
             // Step 2: SignKey = HMAC-SHA1(SecretKey, KeyTime)
+            // 用 SecretKey 对 KeyTime 做 HMAC-SHA1
+            // 用钥匙算出一个"密码章"：你拿银行给你的钥匙，对着有效期算出一个特殊的章；你的钥匙 + "2点到2点10分" → 密码章 A；这个章只有你能盖，因为钥匙只有你有。
             String signKey = hmacSha1Hex(
                     secretKey.getBytes(StandardCharsets.UTF_8),
                     keyTime.getBytes(StandardCharsets.UTF_8));
 
             // Step 3: HttpString = HttpMethod\nUriPathname\nHttpParameters\nHttpHeaders\n
             // HttpMethod 必须小写，无 query params 和 headers 时保留空行
+            // HTTP 请求信息拼接成字符串
+            //把信的内容也盖个章：信的内容 → 章 B。这就是 SHA1(HttpString)，证明内容没被动过。
             String httpString = "post\n/datasetquery/hybridsearch\n\n\n";
 
             // Step 4: StringToSign = sha1\nKeyTime\nSHA1(HttpString)\n
+            // 先对 HttpString 做 SHA-1，再和 KeyTime 拼接
+            // 把两个章合在一起： 密码章 A + 章 B → 最终签名。这就是 HMAC-SHA1(signKey, stringToSign)
             String httpStringHash = sha1Hex(httpString.getBytes(StandardCharsets.UTF_8));
             String stringToSign = "sha1\n" + keyTime + "\n" + httpStringHash + "\n";
 
             // Step 5: Signature = HMAC-SHA1(SignKey字符串形式, StringToSign)
             // 重要：SignKey 使用 hex 字符串形式（转为 UTF-8 字节），而非原始二进制
+            // 贴到信封上：你把最终签名贴到信封上，发给对方。对方收到信后，拿到你的签名和信的内容，按照同样的算法计算一遍，如果算出的结果和你贴的一样，就证明信是你发的，内容也没被改过。
             String signature = hmacSha1Hex(
                     signKey.getBytes(StandardCharsets.UTF_8),
                     stringToSign.getBytes(StandardCharsets.UTF_8));
