@@ -52,3 +52,7 @@ ALTER TABLE picture
 
 -- 主色调查询索引
 CREATE INDEX idx_dominantColor ON picture (dominantColor);
+
+-- 添加图片来源字段
+ALTER TABLE picture
+    ADD COLUMN source varchar(32) default 'upload' not null comment '图片来源：upload-上传; ai_generate-AI生成' AFTER aiAnalysis;

@@ -187,8 +187,18 @@ public class CosManager {
             if (response == null) {
                 return "";
             }
-            JSONArray textDetections = response.getJSONArray("TextDetections");
-            if (textDetections == null || textDetections.isEmpty()) {
+            // 单条结果时 TextDetections 是 JSONObject，多条时是 JSONArray
+            Object textDetectionsObj = response.get("TextDetections");
+            JSONArray textDetections;
+            if (textDetectionsObj instanceof JSONArray) {
+                textDetections = (JSONArray) textDetectionsObj;
+            } else if (textDetectionsObj instanceof JSONObject) {
+                textDetections = new JSONArray();
+                textDetections.add(textDetectionsObj);
+            } else {
+                return "";
+            }
+            if (textDetections.isEmpty()) {
                 return "";
             }
             // 拼接所有识别出的文字

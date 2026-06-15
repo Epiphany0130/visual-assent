@@ -106,6 +106,11 @@ public class Picture {
     private String aiAnalysis;
 
     /**
+     * 图片来源：upload-上传; ai_generate-AI生成
+     */
+    private String source;
+
+    /**
      * 审核状态：0-待审核; 1-通过; 2-拒绝
      */
     private Integer reviewStatus;

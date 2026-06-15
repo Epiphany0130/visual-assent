@@ -66,6 +66,14 @@ knife4j:
   setting:
     language: zh_cn # 设置界面语言为中文
 
+# 腾讯混元生图配置
+tencent:
+  image:
+    submit-url: https://tokenhub.tencentmaas.com/v1/api/image/submit
+    query-url: https://tokenhub.tencentmaas.com/v1/api/image/query
+    api-key: ${TENCENT_IMAGE_API_KEY}
+    model: hy-image-v3.0
+
 # 对象存储配置（需要从腾讯云获取）
 cos:
   client:
