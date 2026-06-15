@@ -106,8 +106,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if(inputSource instanceof String) {
             pictureUploadTemplate = urlPictureUpload;
         }
-        // 更改为使用模板上传
-        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
+        // 更改为使用模板上传（附带用户 ID 盲水印）
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix, String.valueOf(loginUser.getId()));
         // 构造要入库的图片信息
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());

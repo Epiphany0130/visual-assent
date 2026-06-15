@@ -57,6 +57,18 @@ public abstract class PictureUploadTemplate {
      * @return 图片上传结果
      */
     public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix) {
+        return uploadPicture(inputSource, uploadPathPrefix, null);
+    }
+
+    /**
+     * 模板方法 定义上传流程（支持盲水印）
+     *
+     * @param inputSource   输入源
+     * @param uploadPathPrefix 上传路径前缀
+     * @param watermarkText 盲水印文字内容（如用户 ID），为 null 则不添加盲水印
+     * @return 图片上传结果
+     */
+    public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix, String watermarkText) {
         // 校验图片
         validPicture(inputSource);
         // 图片上传地址
@@ -71,8 +83,8 @@ public abstract class PictureUploadTemplate {
             file = File.createTempFile(uploadPath, null);
             // 处理文件来源
             processFile(inputSource, file);
-            // 上传图片
-            PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
+            // 上传图片（附带盲水印）
+            PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file, watermarkText);
             // 获取图片信息对象
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             // 获取图片处理结果

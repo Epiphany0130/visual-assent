@@ -79,15 +79,37 @@ public class CosManager {
      * @param file 文件
      */
     public PutObjectResult putPictureObject(String key, File file) {
+        return putPictureObject(key, file, null);
+    }
+
+    /**
+     * 上传对象（附带图片信息 + 盲水印）
+     *
+     * @param key           唯一键
+     * @param file          文件
+     * @param watermarkText 盲水印文字内容（如用户 ID），为 null 则不添加盲水印
+     */
+    public PutObjectResult putPictureObject(String key, File file, String watermarkText) {
         PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key,
                 file);
         // 对图片进行处理（获取基本信息也被视作为一种处理）
         PicOperations picOperations = new PicOperations();
         // 1 表示返回原图信息
         picOperations.setIsPicInfo(1);
-        // 2 图片压缩（转成 WebP）
         // 图片处理规则列表
         ArrayList<PicOperations.Rule> rules = new ArrayList<>();
+        // 盲水印处理（文字全盲水印 type=3, version=3.0, level=1）
+        if (watermarkText != null && !watermarkText.isBlank()) {
+            String textBase64 = java.util.Base64.getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(watermarkText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            PicOperations.Rule watermarkRule = new PicOperations.Rule();
+            watermarkRule.setFileId(key);
+            watermarkRule.setBucket(cosClientConfig.getBucket());
+            watermarkRule.setRule("watermark/3/type/3/text/" + textBase64 + "/level/1/version/3.0");
+            rules.add(watermarkRule);
+        }
+        // 图片压缩（转成 WebP）
         String webpKey = FileUtil.mainName(key) + ".webp";
         PicOperations.Rule compressRule = new PicOperations.Rule();
         compressRule.setFileId(webpKey);

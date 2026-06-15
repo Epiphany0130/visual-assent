@@ -183,7 +183,7 @@ public class AiGenerateServiceImpl implements AiGenerateService {
                         HttpUtil.downloadFile(imageUrl, tempFile);
                         // 复用上传模板：上传 COS + 图片处理 + 标签 + OCR + 颜色分析 + AI 分析
                         String uploadPathPrefix = String.format("ai_generate/%d", task.getUserId());
-                        UploadPictureResult result = aiPictureUpload.uploadPicture(tempFile, uploadPathPrefix);
+                        UploadPictureResult result = aiPictureUpload.uploadPicture(tempFile, uploadPathPrefix, String.valueOf(task.getUserId()));
                         // 创建 Picture 记录
                         Long pictureId = createPictureFromUploadResult(result, task.getUserId(), task.getOptimizedPrompt());
                         task.setImageUrl(result.getUrl());
