@@ -125,7 +125,12 @@ public class PictureVO implements Serializable {
      * 审核时间
      */
     private Date reviewTime;
-  
+
+    /**
+     * 空间 id
+     */
+    private Long spaceId;
+
     /**  
      * 创建时间  
      */  

@@ -15,5 +15,11 @@ public class PictureBatchUploadRequest implements Serializable {
      */
     private String projectName;
 
+    /**
+     * 空间 id
+     */
+    private Long spaceId;
+
+
     private static final long serialVersionUID = 1L;
 }
