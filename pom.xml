@@ -122,6 +122,12 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-model-openai</artifactId>
 		</dependency>
+		<!--		redission-->
+		<dependency>
+			<groupId>org.redisson</groupId>
+			<artifactId>redisson-spring-boot-starter</artifactId>
+			<version>3.25.0</version>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
