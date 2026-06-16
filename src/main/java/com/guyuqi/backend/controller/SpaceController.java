@@ -30,6 +30,7 @@ import com.guyuqi.backend.model.enums.PictureReviewStatusEnum;
 import com.guyuqi.backend.model.enums.SpaceLevelEnum;
 import com.guyuqi.backend.model.vo.picture.PictureTagCategory;
 import com.guyuqi.backend.model.vo.picture.PictureVO;
+import com.guyuqi.backend.model.vo.space.SpaceLevel;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.service.SpaceService;
@@ -222,5 +223,23 @@ public class SpaceController {
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
+
+    /**
+     * 展示所有空间级别信息
+     *
+     * @return 空间级别信息列表
+     */
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values()) // 获取所有枚举
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
+    }
+
 
 }

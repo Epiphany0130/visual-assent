@@ -22,8 +22,8 @@ public enum SpaceLevelEnum {
     /**
      * @param text 文本
      * @param value 值
-     * @param maxSize 最大图片总大小
      * @param maxCount 最大图片总数量
+     * @param maxSize 最大图片总大小
      */
     SpaceLevelEnum(String text, int value, long maxCount, long maxSize) {
         this.text = text;
