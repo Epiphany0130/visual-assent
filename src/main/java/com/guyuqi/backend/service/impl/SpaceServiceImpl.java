@@ -15,8 +15,10 @@ import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.Space;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.SpaceLevelEnum;
+import com.guyuqi.backend.model.vo.picture.PictureVO;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
+import com.guyuqi.backend.utils.ColorSimilarUtils;
 import org.springframework.context.annotation.Lazy;
 import com.guyuqi.backend.model.vo.user.UserVO;
 import com.guyuqi.backend.service.SpaceService;
@@ -31,10 +33,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -305,6 +306,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             pictureList.forEach(pictureService::clearPictureFile);
         }
     }
+
 }
 
 

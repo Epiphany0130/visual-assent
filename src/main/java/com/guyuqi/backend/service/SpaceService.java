@@ -7,8 +7,11 @@ import com.guyuqi.backend.model.dto.space.SpaceAddRequest;
 import com.guyuqi.backend.model.dto.space.SpaceQueryRequest;
 import com.guyuqi.backend.model.entity.Space;
 import com.guyuqi.backend.model.entity.User;
+import com.guyuqi.backend.model.vo.picture.PictureVO;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
 import jakarta.servlet.http.HttpServletRequest;
+
+import java.util.List;
 
 /**
 * @author guyuqi
@@ -81,4 +84,6 @@ public interface SpaceService extends IService<Space> {
      * @param loginUser 当前登录用户
      */
     void deleteSpace(long spaceId, User loginUser);
+
+
 }

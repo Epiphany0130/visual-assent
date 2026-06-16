@@ -132,4 +132,14 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser 当前登录用户
      */
     void deletePicture(long pictureId, User loginUser);
+
+    /**
+     * 按颜色搜索空间内的图片
+     *
+     * @param spaceId 空间 id
+     * @param picColor 目标颜色（十六进制）
+     * @param loginUser 当前登录用户
+     * @return 相似颜色的图片列表
+     */
+    List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
 }
