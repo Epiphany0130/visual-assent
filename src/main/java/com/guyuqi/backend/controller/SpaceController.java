@@ -84,7 +84,7 @@ public class SpaceController {
     }
 
     /**
-     * 删除空间
+     * 删除空间（关联删除空间内的图片）
      * @param deleteRequest 删除请求
      * @param request HTTP 请求
      * @return 是否删除成功
@@ -96,14 +96,8 @@ public class SpaceController {
         }
         User loginUser = userService.getLoginUser(request);
         long id = deleteRequest.getId();
-        // 判断是否存在
-        Space oldSpace = spaceService.getById(id);
-        ThrowUtils.throwIf(oldSpace == null, ErrorCode.NOT_FOUND_ERROR);
-        // 仅本人和管理员可删除
-        spaceService.checkSpaceAuth(loginUser, oldSpace);
-        // 操作数据库
-        boolean result = spaceService.removeById(id);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 调用新的删除方法（包含关联删除图片）
+        spaceService.deleteSpace(id, loginUser);
         return ResultUtils.success(true);
     }
 

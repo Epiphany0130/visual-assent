@@ -11,10 +11,13 @@ import com.guyuqi.backend.exception.ErrorCode;
 import com.guyuqi.backend.exception.ThrowUtils;
 import com.guyuqi.backend.model.dto.space.SpaceAddRequest;
 import com.guyuqi.backend.model.dto.space.SpaceQueryRequest;
+import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.Space;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.SpaceLevelEnum;
+import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
+import org.springframework.context.annotation.Lazy;
 import com.guyuqi.backend.model.vo.user.UserVO;
 import com.guyuqi.backend.service.SpaceService;
 import com.guyuqi.backend.mapper.SpaceMapper;
@@ -45,6 +48,10 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private UserService userService;
+
+    @Lazy
+    @Resource
+    private PictureService pictureService;
 
     @Resource
     private TransactionTemplate transactionTemplate;
@@ -254,6 +261,48 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         // 仅本人或管理员可编辑
         if (!space.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+    }
+
+    /**
+     * 删除空间（关联删除空间内的图片）
+     *
+     * @param spaceId 空间 id
+     * @param loginUser 当前登录用户
+     */
+    @Override
+    public void deleteSpace(long spaceId, User loginUser) {
+        // 1. 查询空间是否存在
+        Space space = this.getById(spaceId);
+        ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
+
+        // 2. 校验权限（仅本人或管理员）
+        this.checkSpaceAuth(loginUser, space);
+
+        // 3. 查询空间下的所有图片
+        List<Picture> pictureList = pictureService.lambdaQuery()
+                .eq(Picture::getSpaceId, spaceId)
+                .list();
+
+        // 4. 事务中删除图片记录和空间
+        transactionTemplate.execute(status -> {
+            // 删除空间
+            boolean result = this.removeById(spaceId);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "删除空间失败");
+
+            // 删除图片记录（逻辑删除）
+            if (CollUtil.isNotEmpty(pictureList)) {
+                List<Long> pictureIds = pictureList.stream()
+                        .map(Picture::getId)
+                        .collect(Collectors.toList());
+                pictureService.removeByIds(pictureIds);
+            }
+            return true;
+        });
+
+        // 5. 异步清理图片文件（COS存储）
+        if (CollUtil.isNotEmpty(pictureList)) {
+            pictureList.forEach(pictureService::clearPictureFile);
         }
     }
 }
