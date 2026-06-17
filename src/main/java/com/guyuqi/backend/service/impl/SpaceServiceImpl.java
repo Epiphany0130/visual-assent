@@ -13,12 +13,16 @@ import com.guyuqi.backend.model.dto.space.SpaceAddRequest;
 import com.guyuqi.backend.model.dto.space.SpaceQueryRequest;
 import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.Space;
+import com.guyuqi.backend.model.entity.SpaceUser;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.SpaceLevelEnum;
+import com.guyuqi.backend.model.enums.SpaceRoleEnum;
 import com.guyuqi.backend.model.enums.SpaceTypeEnum;
 import com.guyuqi.backend.model.vo.picture.PictureVO;
+import com.guyuqi.backend.model.vo.space.SpaceUserVO;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
+import com.guyuqi.backend.service.SpaceUserService;
 import com.guyuqi.backend.utils.ColorSimilarUtils;
 import org.springframework.context.annotation.Lazy;
 import com.guyuqi.backend.model.vo.user.UserVO;
@@ -60,6 +64,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private RedissonClient redissonClient;
+
+    @Resource
+    private SpaceUserService spaceUserService;
 
     /**
      * 创建空间
@@ -111,6 +118,16 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // 创建空间
                 boolean result = this.save(space);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建空间失败");
+                // 如果是团队空间，关联新增团队成员记录
+                if (SpaceTypeEnum.TEAM.getValue() == spaceAddRequest.getSpaceType()) {
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setUserId(userId);
+                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
+
+                }
                 // 返回空间 id
                 return space.getId();
             });
