@@ -20,11 +20,11 @@ import com.guyuqi.backend.service.UserService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * AI 绘图服务实现类
@@ -127,7 +127,7 @@ public class AiGenerateServiceImpl implements AiGenerateService {
         aiGenerateTaskMapper.insert(task);
 
         // 异步执行生图
-        doGenerateImage(task.getId());
+        CompletableFuture.runAsync(() -> doGenerateImage(task.getId()));
 
         return task.getId();
     }
@@ -135,7 +135,6 @@ public class AiGenerateServiceImpl implements AiGenerateService {
     /**
      * 异步执行图片生成
      */
-    @Async
     public void doGenerateImage(Long taskId) {
         AiGenerateTask task = aiGenerateTaskMapper.selectById(taskId);
         if (task == null) {
