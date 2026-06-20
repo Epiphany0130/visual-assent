@@ -18,6 +18,7 @@ import com.guyuqi.backend.exception.BusinessException;
 import com.guyuqi.backend.exception.ErrorCode;
 import com.guyuqi.backend.exception.ThrowUtils;
 import com.guyuqi.backend.manager.CosManager;
+import com.guyuqi.backend.manager.auth.SpaceUserAuthManager;
 import com.guyuqi.backend.model.dto.picture.*;
 import com.guyuqi.backend.model.dto.space.SpaceAddRequest;
 import com.guyuqi.backend.model.dto.space.SpaceEditRequest;
@@ -67,6 +68,9 @@ public class SpaceController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     /**
      * 创建空间
@@ -153,6 +157,9 @@ public class SpaceController {
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
         SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
         return ResultUtils.success(spaceVO);
     }

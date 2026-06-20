@@ -18,6 +18,7 @@ import com.guyuqi.backend.model.vo.space.SpaceUserVO;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
 import com.guyuqi.backend.model.vo.user.UserVO;
 import com.guyuqi.backend.service.SpaceService;
+import org.springframework.context.annotation.Lazy;
 import com.guyuqi.backend.service.SpaceUserService;
 import com.guyuqi.backend.mapper.SpaceUserMapper;
 import com.guyuqi.backend.service.UserService;
@@ -44,6 +45,7 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
     @Resource
     private UserService userService;
 
+    @Lazy
     @Resource
     private SpaceService spaceService;
 
