@@ -15,8 +15,11 @@ import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.UserRoleEnum;
 import com.guyuqi.backend.model.vo.user.LoginUserVO;
 import com.guyuqi.backend.model.vo.user.UserVO;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.UserService;
 import com.guyuqi.backend.mapper.UserMapper;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -38,6 +41,9 @@ import static com.guyuqi.backend.constant.UserConstant.USER_LOGIN_STATE;
 @Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     implements UserService{
+
+    @Resource
+    private LogService logService;
 
     /**
      * 用户注册
@@ -68,6 +74,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setUserRole(UserRoleEnum.USER.getValue());
         boolean saveResult = this.save(user);
         ThrowUtils.throwIf(!saveResult, ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
+        // 记录注册日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(user.getId());
+        logAddRequest.setUserName(user.getUserName());
+        logAddRequest.setOperationType("register");
+        logAddRequest.setTargetType("user");
+        logAddRequest.setTargetId(user.getId());
+        logAddRequest.setTargetName(userAccount);
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return user.getId();
     }
 
@@ -100,6 +116,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 用户不存在
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
+            // 记录登录失败日志
+            LogAddRequest failLog = new LogAddRequest();
+            failLog.setOperationType("login");
+            failLog.setTargetType("user");
+            failLog.setTargetName(userAccount);
+            failLog.setIpAddress(request.getRemoteAddr());
+            failLog.setStatus(0);
+            logService.addLog(failLog);
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
         // 3. 记录用户的登录态
@@ -107,6 +131,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 4. 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
         StpKit.SPACE.login(user.getId());
         StpKit.SPACE.getSession().set(USER_LOGIN_STATE, user);
+        // 记录登录成功日志
+        LogAddRequest successLog = new LogAddRequest();
+        successLog.setUserId(user.getId());
+        successLog.setUserName(user.getUserName());
+        successLog.setOperationType("login");
+        successLog.setTargetType("user");
+        successLog.setTargetId(user.getId());
+        successLog.setTargetName(userAccount);
+        successLog.setIpAddress(request.getRemoteAddr());
+        successLog.setStatus(1);
+        logService.addLog(successLog);
         return this.getLoginUserVO(user);
     }
 
@@ -168,8 +203,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (userObj == null) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "未登录");
         }
+        User user = (User) userObj;
         // 移除登录态
         request.getSession().removeAttribute(USER_LOGIN_STATE);
+        // 记录注销日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(user.getId());
+        logAddRequest.setUserName(user.getUserName());
+        logAddRequest.setOperationType("logout");
+        logAddRequest.setTargetType("user");
+        logAddRequest.setTargetId(user.getId());
+        logAddRequest.setTargetName(user.getUserAccount());
+        logAddRequest.setIpAddress(request.getRemoteAddr());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return true;
     }
 

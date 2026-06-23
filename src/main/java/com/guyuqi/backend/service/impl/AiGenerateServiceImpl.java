@@ -14,7 +14,9 @@ import com.guyuqi.backend.model.dto.file.UploadPictureResult;
 import com.guyuqi.backend.model.entity.AiGenerateTask;
 import com.guyuqi.backend.model.entity.Picture;
 import com.guyuqi.backend.model.entity.User;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
 import com.guyuqi.backend.service.AiGenerateService;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.service.UserService;
 import jakarta.annotation.Resource;
@@ -50,6 +52,9 @@ public class AiGenerateServiceImpl implements AiGenerateService {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private LogService logService;
 
     private static final String SYSTEM_PROMPT = """
             你是一个专业的 AI 绘图 prompt 优化助手。你的任务是将用户简单的图片描述，优化为一段更详细、更专业的 AI 绘图 prompt。
@@ -128,6 +133,16 @@ public class AiGenerateServiceImpl implements AiGenerateService {
 
         // 异步执行生图
         CompletableFuture.runAsync(() -> doGenerateImage(task.getId()));
+
+        // 记录 AI 生图提交日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(userId);
+        logAddRequest.setOperationType("ai_generate");
+        logAddRequest.setTargetType("ai_generate_task");
+        logAddRequest.setTargetId(task.getId());
+        logAddRequest.setTargetName(prompt);
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
 
         return task.getId();
     }

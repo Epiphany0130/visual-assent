@@ -15,6 +15,8 @@ import com.guyuqi.backend.model.dto.spaceuser.SpaceUserQueryRequest;
 import com.guyuqi.backend.model.entity.SpaceUser;
 import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.vo.space.SpaceUserVO;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.SpaceUserService;
 import com.guyuqi.backend.service.UserService;
 import jakarta.annotation.Resource;
@@ -42,6 +44,9 @@ public class SpaceUserController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private LogService logService;
+
     /**
      * 添加成员到空间
      */
@@ -50,6 +55,17 @@ public class SpaceUserController {
     public BaseResponse<Long> addSpaceUser(@RequestBody SpaceUserAddRequest spaceUserAddRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(spaceUserAddRequest == null, ErrorCode.PARAMS_ERROR);
         long id = spaceUserService.addSpaceUser(spaceUserAddRequest);
+        // 记录添加成员日志
+        User loginUser = userService.getLoginUser(request);
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("permission_change");
+        logAddRequest.setTargetType("space_user");
+        logAddRequest.setTargetId(id);
+        logAddRequest.setSpaceId(spaceUserAddRequest.getSpaceId());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return ResultUtils.success(id);
     }
 
@@ -70,6 +86,17 @@ public class SpaceUserController {
         // 操作数据库
         boolean result = spaceUserService.removeById(id);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 记录移除成员日志
+        User loginUser = userService.getLoginUser(request);
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("permission_change");
+        logAddRequest.setTargetType("space_user");
+        logAddRequest.setTargetId(id);
+        logAddRequest.setSpaceId(oldSpaceUser.getSpaceId());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return ResultUtils.success(true);
     }
 
@@ -126,6 +153,17 @@ public class SpaceUserController {
         // 操作数据库
         boolean result = spaceUserService.updateById(spaceUser);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 记录编辑成员权限日志
+        User loginUser = userService.getLoginUser(request);
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("permission_change");
+        logAddRequest.setTargetType("space_user");
+        logAddRequest.setTargetId(id);
+        logAddRequest.setSpaceId(oldSpaceUser.getSpaceId());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return ResultUtils.success(true);
     }
 

@@ -29,6 +29,8 @@ import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.PictureReviewStatusEnum;
 import com.guyuqi.backend.model.vo.picture.PictureTagCategory;
 import com.guyuqi.backend.model.vo.picture.PictureVO;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.service.SpaceService;
 import com.guyuqi.backend.service.UserService;
@@ -78,6 +80,9 @@ public class PictureController {
 
     @Resource
     private SpaceUserAuthManager spaceUserAuthManager;
+
+    @Resource
+    private LogService logService;
 
     private final Cache<String, String> LOCAL_CACHE =
             Caffeine.newBuilder().initialCapacity(1024)
@@ -417,6 +422,17 @@ public class PictureController {
         // 操作数据库
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 记录编辑日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("edit");
+        logAddRequest.setTargetType("picture");
+        logAddRequest.setTargetId(oldPicture.getId());
+        logAddRequest.setTargetName(oldPicture.getName());
+        logAddRequest.setSpaceId(oldPicture.getSpaceId());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return ResultUtils.success(true);
     }
 
@@ -494,6 +510,16 @@ public class PictureController {
                     result.add(pictureService.getPictureVO(matchPicture, request));
                 }
             }
+            // 记录以图搜图日志
+            User loginUser = userService.getLoginUser(request);
+            LogAddRequest logAddRequest = new LogAddRequest();
+            logAddRequest.setUserId(loginUser.getId());
+            logAddRequest.setUserName(loginUser.getUserName());
+            logAddRequest.setOperationType("download");
+            logAddRequest.setTargetType("picture");
+            logAddRequest.setTargetName("以图搜图");
+            logAddRequest.setStatus(1);
+            logService.addLog(logAddRequest);
             return ResultUtils.success(result);
         } finally {
             // 清理临时文件

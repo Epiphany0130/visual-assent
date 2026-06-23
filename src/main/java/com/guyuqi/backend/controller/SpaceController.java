@@ -34,6 +34,8 @@ import com.guyuqi.backend.model.vo.picture.PictureVO;
 import com.guyuqi.backend.model.vo.space.SpaceLevel;
 import com.guyuqi.backend.model.vo.space.SpaceVO;
 import com.guyuqi.backend.service.PictureService;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.SpaceService;
 import com.guyuqi.backend.service.UserService;
 import jakarta.annotation.Resource;
@@ -71,6 +73,9 @@ public class SpaceController {
 
     @Resource
     private SpaceUserAuthManager spaceUserAuthManager;
+
+    @Resource
+    private LogService logService;
 
     /**
      * 创建空间
@@ -222,6 +227,16 @@ public class SpaceController {
         // 操作数据库
         boolean result = spaceService.updateById(space);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 记录编辑空间日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("edit");
+        logAddRequest.setTargetType("space");
+        logAddRequest.setTargetId(oldSpace.getId());
+        logAddRequest.setTargetName(oldSpace.getSpaceName());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return ResultUtils.success(true);
     }
 

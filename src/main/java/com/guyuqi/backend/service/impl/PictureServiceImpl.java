@@ -27,6 +27,8 @@ import com.guyuqi.backend.model.entity.User;
 import com.guyuqi.backend.model.enums.PictureReviewStatusEnum;
 import com.guyuqi.backend.model.vo.picture.PictureVO;
 import com.guyuqi.backend.model.vo.user.UserVO;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.PictureService;
 import com.guyuqi.backend.mapper.PictureMapper;
 import com.guyuqi.backend.service.SpaceService;
@@ -64,9 +66,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     implements PictureService{
 
     @Resource
-    private FileManager fileManager;
-
-    @Resource
     private UserService userService;
 
     @Lazy
@@ -84,6 +83,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private TransactionTemplate transactionTemplate;
+
+    @Resource
+    private LogService logService;
 
     /**
      * 上传图片
@@ -219,6 +221,17 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (oldPicture != null) {
             clearPictureFile(oldPicture);
         }
+        // 记录上传日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("upload");
+        logAddRequest.setTargetType("picture");
+        logAddRequest.setTargetId(picture.getId());
+        logAddRequest.setTargetName(picture.getName());
+        logAddRequest.setSpaceId(spaceId);
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
         return PictureVO.objToVo(picture);
     }
 
@@ -405,6 +418,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         updatePicture.setReviewTime(new Date());
         boolean result = this.updateById(updatePicture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        // 记录审核日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("approve");
+        logAddRequest.setTargetType("picture");
+        logAddRequest.setTargetId(oldPicture.getId());
+        logAddRequest.setTargetName(oldPicture.getName());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
     }
 
     /**
@@ -625,6 +648,17 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         });
         // 异步清理文件
         this.clearPictureFile(oldPicture);
+        // 记录删除日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("delete");
+        logAddRequest.setTargetType("picture");
+        logAddRequest.setTargetId(oldPicture.getId());
+        logAddRequest.setTargetName(oldPicture.getName());
+        logAddRequest.setSpaceId(oldPicture.getSpaceId());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
     }
 
 

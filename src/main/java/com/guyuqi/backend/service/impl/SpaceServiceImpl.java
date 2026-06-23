@@ -26,6 +26,8 @@ import com.guyuqi.backend.service.SpaceUserService;
 import com.guyuqi.backend.utils.ColorSimilarUtils;
 import org.springframework.context.annotation.Lazy;
 import com.guyuqi.backend.model.vo.user.UserVO;
+import com.guyuqi.backend.model.dto.log.LogAddRequest;
+import com.guyuqi.backend.service.LogService;
 import com.guyuqi.backend.service.SpaceService;
 import com.guyuqi.backend.mapper.SpaceMapper;
 import com.guyuqi.backend.service.UserService;
@@ -67,6 +69,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private SpaceUserService spaceUserService;
+
+    @Resource
+    private LogService logService;
 
     /**
      * 创建空间
@@ -131,6 +136,18 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // 返回空间 id
                 return space.getId();
             });
+            // 记录创建空间日志
+            if (newSpaceId != null && newSpaceId > 0) {
+                LogAddRequest logAddRequest = new LogAddRequest();
+                logAddRequest.setUserId(loginUser.getId());
+                logAddRequest.setUserName(loginUser.getUserName());
+                logAddRequest.setOperationType("create");
+                logAddRequest.setTargetType("space");
+                logAddRequest.setTargetId(newSpaceId);
+                logAddRequest.setTargetName(spaceAddRequest.getSpaceName());
+                logAddRequest.setStatus(1);
+                logService.addLog(logAddRequest);
+            }
             return Optional.ofNullable(newSpaceId).orElse(-1L);
         } finally {
             lock.unlock();
@@ -331,6 +348,16 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         if (CollUtil.isNotEmpty(pictureList)) {
             pictureList.forEach(pictureService::clearPictureFile);
         }
+        // 记录删除空间日志
+        LogAddRequest logAddRequest = new LogAddRequest();
+        logAddRequest.setUserId(loginUser.getId());
+        logAddRequest.setUserName(loginUser.getUserName());
+        logAddRequest.setOperationType("delete");
+        logAddRequest.setTargetType("space");
+        logAddRequest.setTargetId(spaceId);
+        logAddRequest.setTargetName(space.getSpaceName());
+        logAddRequest.setStatus(1);
+        logService.addLog(logAddRequest);
     }
 
 }
