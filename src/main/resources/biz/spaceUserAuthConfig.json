@@ -24,6 +24,11 @@
       "key": "picture:delete",
       "name": "删除图片",
       "description": "删除空间中的图片"
+    },
+    {
+      "key": "picture:transfer",
+      "name": "流转图片",
+      "description": "将图片流转到其他空间"
     }
   ],
   "roles": [
@@ -42,9 +47,10 @@
         "picture:view",
         "picture:upload",
         "picture:edit",
-        "picture:delete"
+        "picture:delete",
+        "picture:transfer"
       ],
-      "description": "查看图片、上传图片、修改图片、删除图片"
+      "description": "查看图片、上传图片、修改图片、删除图片、流转图片"
     },
     {
       "key": "admin",
@@ -54,9 +60,10 @@
         "picture:view",
         "picture:upload",
         "picture:edit",
-        "picture:delete"
+        "picture:delete",
+        "picture:transfer"
       ],
-      "description": "成员管理、查看图片、上传图片、修改图片、删除图片"
+      "description": "成员管理、查看图片、上传图片、修改图片、删除图片、流转图片"
     }
   ]
 }

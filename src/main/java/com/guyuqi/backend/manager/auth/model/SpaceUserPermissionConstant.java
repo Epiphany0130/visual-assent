@@ -28,4 +28,9 @@ public interface SpaceUserPermissionConstant {
      * 图片删除权限
      */
     String PICTURE_DELETE = "picture:delete";
+
+    /**
+     * 图片流转权限
+     */
+    String PICTURE_TRANSFER = "picture:transfer";
 }
